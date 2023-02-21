@@ -78,5 +78,18 @@ int main()
 			else
 				return num;
 		});
-	dec15();
+	//dec15();
+
+	std::cout << std::endl;
+
+	auto dec16 = decorate_asynchron(lambdafoo_3, false);
+	dec16(3, "name");
+	dec16.join();
+
+	std::cout << std::endl;
+
+	auto dec17 = decorate_asynchron(decorate_tracelog(decorate_printres(decorate_exception(lambdafoo_3))));
+	dec17(3, "name");
+
+	std::cout << std::endl;
 }

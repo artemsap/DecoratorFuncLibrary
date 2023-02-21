@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <thread>
 
 template <class func>
 class BaseDecoratorFunc
@@ -129,7 +130,14 @@ public:
 	template <typename ...Args>
 	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
 	{
-		baseDec(method_args...);
+		try 
+		{
+			baseDec(method_args...);
+		}
+		catch (...)
+		{
+			std::clog << "ERROR IN FUNCTION" << std::endl;
+		}
 	}
 
 	template <typename ...Args>
@@ -153,4 +161,43 @@ template<class T>
 CatchExceptionDecoratorFunc<T> decorate_exception(T func)
 {
 	return CatchExceptionDecoratorFunc<T>(func);
+}
+
+template <class func>
+class AsynchronDecoratorFunc
+{
+private:
+	BaseDecoratorFunc<func> baseDec;
+
+	template <typename ...Args>
+	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
+
+	std::thread dec_thread;
+	bool autojoin;
+public:
+	AsynchronDecoratorFunc(func _functor, bool _autojoin = true) : baseDec(_functor), autojoin(_autojoin) {}
+
+	template <typename ...Args>
+	static void CreateThread(typename std::decay<BaseDecoratorFunc<func>>::type baseDec, typename std::decay<Args>::type... method_args) {
+		std::cout << "Thread created" << std::endl << "Thread ID : " << std::this_thread::get_id() << std::endl;
+		baseDec(method_args...);
+	}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
+	{
+		dec_thread = std::thread(AsynchronDecoratorFunc::CreateThread<Args...>, baseDec, method_args...);
+		if (autojoin)
+			dec_thread.join();
+	}
+
+	void join() {
+		dec_thread.join();
+	}
+};
+
+template<class T>
+AsynchronDecoratorFunc<T> decorate_asynchron(T func, bool autojoin = true)
+{
+	return AsynchronDecoratorFunc<T>(func, autojoin);
 }
