@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <thread>
+#include <time.h>
 
 template <class func>
 class BaseDecoratorFunc
@@ -201,3 +202,44 @@ AsynchronDecoratorFunc<T> decorate_asynchron(T func, bool autojoin = true)
 {
 	return AsynchronDecoratorFunc<T>(func, autojoin);
 }
+
+//todo Декоратор для подсчета времени работы функции
+template <class func>
+class CalcTimeDecoratorFunc
+{
+private:
+	BaseDecoratorFunc<func> baseDec;
+
+	template <typename ...Args>
+	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
+public:
+	CalcTimeDecoratorFunc(func _functor) : baseDec(_functor) {}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
+	{
+		clock_t start = clock();
+		baseDec(method_args...);
+		clock_t end = clock();
+		double seconds = (double)(end - start) / CLOCKS_PER_SEC;
+		std::cout << "decorate_calctime: time to perform the function: "<< seconds << " seconds" << std::endl;
+	}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<!std::is_void_v<ret_type<Args...>>, ret_type<Args...>>::type
+	{
+		clock_t start = clock();
+		auto ret = baseDec(method_args...);
+		clock_t end = clock();
+		double seconds = (double)(end - start) / CLOCKS_PER_SEC;
+		std::cout << "decorate_calctime: time to perform the function: " << seconds << " seconds" << std::endl;
+		return ret;
+	}
+};
+
+template<class T>
+CalcTimeDecoratorFunc<T> decorate_calctime(T func)
+{
+	return CalcTimeDecoratorFunc<T>(func);
+}
+//todo 

@@ -39,6 +39,14 @@ int main()
 		};
 	};
 
+	auto lambdafoo_4 = [](std::size_t n)
+	{
+		size_t sum = 0;
+		for (std::size_t i = 0; i != n; ++i) {
+			sum += i;
+		};
+	};
+
 	SimpleFuncator a;
 
 	auto dec11 = decorate_tracelog(
@@ -90,6 +98,11 @@ int main()
 
 	auto dec17 = decorate_asynchron(decorate_tracelog(decorate_printres(decorate_exception(lambdafoo_3))));
 	dec17(3, "name");
+
+	std::cout << std::endl;
+
+	auto dec18 = decorate_asynchron(decorate_calctime(decorate_tracelog(decorate_printres(decorate_exception(lambdafoo_4)))));
+	dec18(1000000);
 
 	std::cout << std::endl;
 }
