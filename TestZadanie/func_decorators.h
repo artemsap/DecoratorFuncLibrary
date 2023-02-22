@@ -1,7 +1,9 @@
 #pragma once
 #include <iostream>
+#include <fstream>
 #include <thread>
 #include <time.h>
+#include <ctime>
 
 template <class func>
 class BaseDecoratorFunc
@@ -21,6 +23,7 @@ public:
 	}
 };
 
+//Декоратор для вывода входных и выходных аргументов поступающих в функатор
 template <class func>
 class TraceLogDecoratorFunc
 {
@@ -29,22 +32,22 @@ private:
 
 	template <typename ...Args>
 	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
-	
+
 	void PrintArgs()
 	{
 		std::cout << "No input arguments" << std::endl;
 	}
 
-	template<typename Arg>
-	void PrintArgs(Arg first)
+	template <typename Arg>
+	void PrintArgs(Arg arg)
 	{
-		std::cout << '[' << first << ']' << std::endl;
+		std::cout << '[' << arg << "] " << std::endl;
 	}
 
-	template<typename Arg, typename... Args>
-	void PrintArgs(Arg first, Args... others)
+	template <typename Arg, typename ...Args>
+	void PrintArgs(Arg arg, Args... others)
 	{
-		std::cout << '[' << first << "] ";
+		std::cout << '[' << arg << "] ";
 		PrintArgs(others...);
 	}
 
@@ -56,8 +59,8 @@ private:
 	}
 
 public:
-	TraceLogDecoratorFunc(func _functor) : baseDec(_functor){}
-	
+	TraceLogDecoratorFunc(func _functor) : baseDec(_functor) {}
+
 	template <typename ...Args>
 	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
 	{
@@ -82,6 +85,7 @@ TraceLogDecoratorFunc<T> decorate_tracelog(T func)
 	return TraceLogDecoratorFunc<T>(func);
 }
 
+//Декоратор для вывода результата выполнения функции при вызове функатора
 template <class func>
 class PrintResultDecoratorFunc
 {
@@ -116,6 +120,7 @@ PrintResultDecoratorFunc<T> decorate_printres(T func)
 	return PrintResultDecoratorFunc<T>(func);
 }
 
+//Декоратор для отлова ошибок при вызове функатора
 template <class func>
 class CatchExceptionDecoratorFunc
 {
@@ -131,7 +136,7 @@ public:
 	template <typename ...Args>
 	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
 	{
-		try 
+		try
 		{
 			baseDec(method_args...);
 		}
@@ -144,7 +149,7 @@ public:
 	template <typename ...Args>
 	auto operator() (Args... method_args) -> typename std::enable_if<!std::is_void_v<ret_type<Args...>>, ret_type<Args...>>::type
 	{
-		try 
+		try
 		{
 			auto ret = baseDec(method_args...);
 			std::clog << "NO ERROR IN FUNCTION" << std::endl;
@@ -164,6 +169,7 @@ CatchExceptionDecoratorFunc<T> decorate_exception(T func)
 	return CatchExceptionDecoratorFunc<T>(func);
 }
 
+//Декоратор для асинхронного вызова функатора
 template <class func>
 class AsynchronDecoratorFunc
 {
@@ -203,7 +209,7 @@ AsynchronDecoratorFunc<T> decorate_asynchron(T func, bool autojoin = true)
 	return AsynchronDecoratorFunc<T>(func, autojoin);
 }
 
-//todo Декоратор для подсчета времени работы функции
+//Декоратор для подсчета времени работы функатора
 template <class func>
 class CalcTimeDecoratorFunc
 {
@@ -222,7 +228,7 @@ public:
 		baseDec(method_args...);
 		clock_t end = clock();
 		double seconds = (double)(end - start) / CLOCKS_PER_SEC;
-		std::cout << "decorate_calctime: time to perform the function: "<< seconds << " seconds" << std::endl;
+		std::cout << "decorate_calctime: time to perform the function: " << seconds << " seconds" << std::endl;
 	}
 
 	template <typename ...Args>
@@ -242,4 +248,250 @@ CalcTimeDecoratorFunc<T> decorate_calctime(T func)
 {
 	return CalcTimeDecoratorFunc<T>(func);
 }
-//todo 
+
+//Декоратор для вывода времени вызова функатора
+template <class func>
+class PrintTimeDecoratorFunc
+{
+private:
+	BaseDecoratorFunc<func> baseDec;
+
+	template <typename ...Args>
+	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
+public:
+	PrintTimeDecoratorFunc(func _functor) : baseDec(_functor) {}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
+	{
+		std::time_t cur_time = std::time(0);
+		std::tm now;
+		localtime_s(&now, &cur_time);
+		std::cout << "decorate_printtime: Current time of function execution: "
+			<< (now.tm_year + 1900) << '-' << (now.tm_mon + 1) << '-' << now.tm_mday << ' '
+			<< now.tm_hour << ':' << now.tm_min << ':' << now.tm_sec << std::endl;
+		baseDec(method_args...);
+	}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<!std::is_void_v<ret_type<Args...>>, ret_type<Args...>>::type
+	{
+		std::time_t cur_time = std::time(0);
+		std::tm now;
+		localtime_s(&now, &cur_time);
+		std::cout << "decorate_printtime: Current time of function execution: "
+			<< (now.tm_year + 1900) << '-' << (now.tm_mon + 1) << '-' << now.tm_mday << ' '
+			<< now.tm_hour << ':' << now.tm_min << ':' << now.tm_sec << std::endl;
+		auto ret = baseDec(method_args...);
+		return ret;
+	}
+};
+
+template<class T>
+PrintTimeDecoratorFunc<T> decorate_printtime(T func)
+{
+	return PrintTimeDecoratorFunc<T>(func);
+}
+
+//Декоратор, который перенаправляет все std::cout в файл (некая система логирования)
+template <class func>
+class LoggerDecoratorFunc
+{
+private:
+	BaseDecoratorFunc<func> baseDec;
+
+	template <typename ...Args>
+	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
+
+	std::streambuf* oldbuf;
+	std::string log_filename;
+
+public:
+	LoggerDecoratorFunc(func _functor, std::string file_name = "log.txt") : baseDec(_functor), log_filename(file_name), oldbuf(nullptr) {}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
+	{
+		std::cout << "start decorate_logger" << std::endl;
+		oldbuf = std::cout.rdbuf();
+		std::ofstream log_file(log_filename, std::ios::app);
+		std::cout.rdbuf(log_file.rdbuf());
+		baseDec(method_args...);
+		std::cout.rdbuf(oldbuf);
+		std::cout << "end decorate_logger" << std::endl;
+	}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<!std::is_void_v<ret_type<Args...>>, ret_type<Args...>>::type
+	{
+		std::cout << "start decorate_logger" << std::endl;
+		oldbuf = std::cout.rdbuf();
+		std::ofstream log_file(log_filename);
+		std::cout.rdbuf(log_file.rdbuf());
+		auto ret = baseDec(method_args...);
+		std::cout.rdbuf(oldbuf);
+		return ret;
+		std::cout << "end decorate_logger" << std::endl;
+	}
+};
+
+template<class T>
+LoggerDecoratorFunc<T> decorate_logger(T func)
+{
+	return LoggerDecoratorFunc<T>(func);
+}
+
+template <class T>
+struct RetValueWrapper {
+	template <class Tfunc, class... Targs>
+	RetValueWrapper(Tfunc func, Targs ... args) : val(func(args...)) {}
+
+	T value() { return val; }
+
+private:
+	T val;
+};
+
+template <>
+struct RetValueWrapper<void> {
+	template <class Tfunc, class... Targs>
+	RetValueWrapper(Tfunc func, Targs... args) {
+		func(args...);
+	}
+
+	void value() {}
+};
+
+//Модифицированная версия декоратора общего вида для создания собственных
+template <class func, class beforefunc, class afterfunc>
+class TemplateDecoratorFunc
+{
+private:
+	BaseDecoratorFunc<func> baseDec;
+	beforefunc before_dec;
+	afterfunc after_dec;
+
+	template <typename ...Args>
+	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
+public:
+	TemplateDecoratorFunc(func _functor, beforefunc _before, afterfunc _cafter) :
+		baseDec(_functor), before_dec(_before), after_dec(_cafter) {}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
+	{
+		before_dec(method_args...);
+		baseDec(method_args...);
+		after_dec(method_args...);
+	}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<!std::is_void_v<ret_type<Args...>>, ret_type<Args...>>::type
+	{
+		before_dec(method_args...);
+		auto ret = baseDec(method_args...);
+		after_dec(method_args...);
+		return ret;
+	}
+
+};
+
+template <class T, class T1, class T2>
+TemplateDecoratorFunc<T, T1, T2> create_customdecorate(T func, T1 before, T2 after)
+{
+	return TemplateDecoratorFunc<T, T1, T2>(func, before, after);
+}
+
+/*
+template <class func, class beforefunc, class afterfunc>
+class TemplateDecoratorFunc2
+{
+private:
+	BaseDecoratorFunc<func> baseDec;
+	beforefunc before_dec;
+	afterfunc after_dec;
+	bool is_rec;
+	bool is_argument;
+
+	template <typename ...Args>
+	using ret_type = std::result_of_t<decltype(baseDec)(Args...)>;
+
+	template <std::size_t is_argument, typename T>
+	void dec_process(bool is_rec, T func_to_call)
+	{
+		func_to_call();
+	}
+
+	template <std::size_t is_argument, typename T, typename Arg>
+	typename std::enable_if<is_argument == 1, void>::type dec_process(bool is_rec, T func_to_call, Arg arg)
+	{
+		func_to_call(arg);
+	}
+
+	template <std::size_t is_argument, typename T, typename Arg>
+	typename std::enable_if<is_argument == 0, void>::type dec_process(bool is_rec, T func_to_call, Arg arg)
+	{
+		func_to_call();
+	}
+
+	template <std::size_t is_argument, typename T, typename Arg, typename ...Args>
+	typename std::enable_if<is_argument == 1, void>::type dec_process(bool is_rec, T func_to_call, Arg arg, Args... others)
+	{
+		func_to_call(arg);
+
+		if (is_rec) {
+			dec_process<is_argument>(is_rec, func_to_call, others...);
+		}
+	}
+
+	template <std::size_t is_argument, typename T, typename Arg, typename ...Args>
+	typename std::enable_if<is_argument == 0, void>::type dec_process(bool is_rec, T func_to_call, Arg arg, Args... others)
+	{
+		func_to_call();
+
+		if (is_rec) {
+			dec_process<is_argument>(is_rec, func_to_call, others...);
+		}
+	}
+
+	constexpr const std::size_t is_arg(bool _is_arg)
+	{
+		return _is_arg ? 1 : 0;
+	}
+
+public:
+	TemplateDecoratorFunc2(func _functor, beforefunc _before, afterfunc _after, bool _is_rec, bool _is_arg) :
+		baseDec(_functor), before_dec(_before), after_dec(_after), is_rec(_is_rec), is_argument(_is_arg) {}
+
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<std::is_void_v<ret_type<Args...>>>::type
+	{
+		auto I = is_arg(is_argument);
+		dec_process< is_arg(is_argument)>(is_rec, before_dec, method_args...);
+
+		baseDec(method_args...);
+
+		dec_process<I> (is_rec, after_dec, method_args...);
+	}
+
+	template <typename ...Args>
+	auto operator() (Args... method_args) -> typename std::enable_if<!std::is_void_v<ret_type<Args...>>, ret_type<Args...>>::type
+	{
+		auto I = is_arg(is_argument);
+		dec_process<I>(is_rec, before_dec, method_args...);
+
+		auto ret = baseDec(method_args...);
+
+		dec_process<I>(is_rec, after_dec, method_args...);
+
+		return ret;
+	}
+
+};
+
+template <class T, class T1, class T2>
+auto create_customdecorate2(T func, T1 before, T2 after)
+{
+	return TemplateDecoratorFunc2<T, T1, T2>(func, before, after, true, true);
+}*/

@@ -4,6 +4,10 @@
 
 #include "func_decorators.h"
 
+#include <type_traits>
+#include <utility>
+#include <iostream>
+
 class SimpleFuncator
 {
 public:
@@ -13,19 +17,14 @@ public:
 	}
 };
 
-void foo(std::string str)
-{
-	std::cout << "Hello " << str << std::endl;
-}
-
 int main()
 {
 	auto lambdafoo = []() {
 		std::cout << "Hello world" << std::endl;
 	};
 
-	auto lambdafoo_1 = [](std::string name) {
-		std::cout << "Hello " << name << std::endl;
+	auto lambdafoo_1 = [](auto name) {
+		std::cout << "[" << name << "]" << std::endl;
 	};
 
 	auto lambdafoo_2 = [](std::string name) {
@@ -58,7 +57,7 @@ int main()
 		}
 	);
 	dec11(3, "name");
-	
+
 	std::cout << std::endl;
 
 	auto dec12 = decorate_printres(lambdafoo_2);
@@ -80,16 +79,17 @@ int main()
 		[]()
 		{
 			int num;
-			std::cin >> num;
-			if (num < 0)
-				throw - 1;
-			else
-				return num;
+	std::cin >> num;
+	if (num < 0)
+		throw - 1;
+	else
+		return num;
 		});
 	//dec15();
 
 	std::cout << std::endl;
 
+	std::thread dec_thread;
 	auto dec16 = decorate_asynchron(lambdafoo_3, false);
 	dec16(3, "name");
 	dec16.join();
@@ -105,4 +105,26 @@ int main()
 	dec18(1000000);
 
 	std::cout << std::endl;
+
+	auto dec19 = decorate_printtime(lambdafoo_4);
+	dec19(100000);
+
+	std::cout << std::endl;
+
+	auto dec20 = decorate_logger(decorate_calctime(decorate_tracelog(decorate_printres(decorate_printtime(lambdafoo_4)))));
+	dec20(10000000);
+
+	std::cout << std::endl;
+
+	auto dec21 = decorate_asynchron(decorate_logger(decorate_calctime(decorate_tracelog(decorate_printres(decorate_printtime(lambdafoo_3))))));
+	dec21(1000, "name");
+
+	std::cout << std::endl;
+
+	auto dec22 = create_customdecorate(lambdafoo, lambdafoo, lambdafoo);
+	dec22();
+
+	std::cout << std::endl;
+
+
 }
