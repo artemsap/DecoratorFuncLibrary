@@ -1,12 +1,9 @@
 ﻿#include <iostream>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
 #include "func_decorators.h"
-
-#include <type_traits>
-#include <utility>
-#include <iostream>
 
 class SimpleFuncator
 {
@@ -123,8 +120,4 @@ int main()
 
 	auto dec22 = create_customdecorate(lambdafoo, lambdafoo, lambdafoo);
 	dec22();
-
-	std::cout << std::endl;
-
-
 }
