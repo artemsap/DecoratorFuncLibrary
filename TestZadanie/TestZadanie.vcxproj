@@ -130,6 +130,9 @@
   <ItemGroup>
     <ClCompile Include="TestZadanie.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="func_decorators.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

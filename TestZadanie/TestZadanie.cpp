@@ -79,11 +79,11 @@ int main()
 		[]()
 		{
 			int num;
-	std::cin >> num;
-	if (num < 0)
-		throw - 1;
-	else
-		return num;
+			std::cin >> num;
+			if (num < 0)
+				throw - 1;
+			else
+				return num;
 		});
 	//dec15();
 
